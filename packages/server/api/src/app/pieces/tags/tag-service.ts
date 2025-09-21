@@ -4,6 +4,8 @@ import { repoFactory } from '../../core/db/repo-factory'
 import { buildPaginator } from '../../helper/pagination/build-paginator'
 import { paginationHelper } from '../../helper/pagination/pagination-utils'
 import { TagEntity } from './tag-entity'
+import { databaseConnection } from '../../../app/database/database-connection'
+import { PieceTagEntity } from './pieces/piece-tag.entity'
 
 
 const repo = repoFactory(TagEntity)
@@ -52,5 +54,24 @@ export const tagService = {
         )
         return paginationHelper.createPage<Tag>(data, cursor)
     },
+
+    async delete(platformId: string, tagId: string): Promise<void> {
+        const dataSource = databaseConnection()
+        
+        await dataSource.transaction(async (entityManager) => {
+            // Check if tag exists and belongs to platform
+            const tag = await entityManager.findOne(TagEntity, {
+                where: { id: tagId, platformId }
+            })
+            
+            if (!tag) {
+                throw new Error('Tag not found')
+            }
+            
+            await entityManager.delete(PieceTagEntity, { tagId })
+            await entityManager.delete(TagEntity, { id: tagId })
+        })
+    }
+
 }
 

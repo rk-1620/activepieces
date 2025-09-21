@@ -37,3 +37,9 @@ export const UpsertTagRequest = Type.Object({
 })
 
 export type UpsertTagRequest = Static<typeof UpsertTagRequest>
+
+export const DeleteTagRequest = Type.Object({
+    tagId: Type.String(),
+})
+
+export type DeleteTagRequest = Static<typeof DeleteTagRequest>

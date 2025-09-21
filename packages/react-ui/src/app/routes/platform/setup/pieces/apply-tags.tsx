@@ -1,6 +1,7 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient  } from '@tanstack/react-query';
 import { t } from 'i18next';
 import { useState, useEffect, useRef } from 'react';
+import { X } from 'lucide-react';
 
 import { CreateTagDialog } from '@/app/routes/platform/setup/pieces/create-tag-dialog';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ type ApplyTagsProps = {
 };
 
 const ApplyTags = ({ selectedPieces, onApplyTags }: ApplyTagsProps) => {
+  const queryClient = useQueryClient();
   const { data: tags = [] } = useQuery({
     queryKey: ['tags'],
     queryFn: async () => {
@@ -72,6 +74,28 @@ const ApplyTags = ({ selectedPieces, onApplyTags }: ApplyTagsProps) => {
       onApplyTags();
     },
   });
+
+  const { mutate: deleteTag } = useMutation({
+      mutationFn: async (tagId: string) => {
+          await piecesTagsApi.delete(tagId);
+      },
+      onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: ['tags']
+          });
+          toast({
+              title: t('Tag deleted successfully'),
+              variant: 'default',
+          });
+      },
+      onError: () => {
+          toast({
+              title: t('Failed to delete tag'),
+              variant: 'destructive',
+          });
+      },
+  });
+
 
   const [tagOptions, setTagOptions] = useState<
     { label: string; value: string }[]
@@ -142,6 +166,23 @@ const ApplyTags = ({ selectedPieces, onApplyTags }: ApplyTagsProps) => {
                         ></Checkbox>
 
                         <span>{option.label}</span>
+
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const tag = tags.find(t => t.name === option.value);
+                                if (tag) {
+                                    deleteTag(tag.id);
+                                }
+                            }}
+                            className="ml-auto p-1 h-6 w-6 text-black hover:text-red-600 hover:bg-red-50 transition-colors duration-200 group relative"
+                            title="Delete tag"
+                        >
+                            <X className="h-3 w-3" />
+                        </Button>
+
                       </CommandItem>
                     );
                   })}
@@ -158,6 +199,9 @@ const ApplyTags = ({ selectedPieces, onApplyTags }: ApplyTagsProps) => {
                   ...tagOptions,
                   { label: tag.name, value: tag.name },
                 ]);
+                queryClient.invalidateQueries({
+                  queryKey: ['tags']
+                });
               }}
               isOpen={createDialogOpen}
               setIsOpen={setCreateDialogOpen}
